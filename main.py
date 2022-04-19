@@ -1,5 +1,3 @@
-from calendar import c
-from click import command
 from flask import Flask
 from flask import request
 import json
@@ -48,10 +46,9 @@ class Response(object):
         return self.play_message_body(body)
 
     def play_message_body(self, body) -> dict:
-
         self.response['response'].update(body)
-
         return self.get_object()
+    
     def get_custom_message_for_pattern(self, pattern, add_text='', add_tts='') -> dict:
         message = pattern.copy()
         message['text'] += add_text
@@ -148,20 +145,22 @@ def main():
                             return response.play_message('Такое имя уже есть! Выберите другое')
 
                         users_play[first_name] = {
-                            'healh': {},
-                            'hobby': '',
-                            'scare': '',
-                            'addition_info': '',
-                            'special_card': '',
+                            'profession': random.choice(config.profession),
+                            'healh': random.choice(config.health),
+                            'hobby':  random.choice(config.hobby),
+                            'scare':  random.choice(config.fear),
+                            'addition_info':  random.choice(config.inform),
+                            'special_card':  random.choice(config.specialmove),
                             'hidden_cards': ['healh', 'hobby', 'scare', 'addition_info', 'special_card'],
                         }
                         response.set_new_users_play(users_play)
                         return response.play_message(
                         f'Отлично, {first_name.capitalize()}! Кто следующий? Если все игроки уже присоединились, скажите: "Алиса, мы готовы"',
-                        f'Отлично {first_name}! Кто следующий? Если все игроки уже присоединились, скажите: "Алиса, мы готовы"')
+                        f'Отлично {first_name}! Кто следующий? Если все игроки уже присоединились, скажите: "Алиса мы готовы"')
 
         if stage == 'start_game':
             curr_user = response.get_user_by_index(response.current_user_index)
+
             
 
     return response.play_incorrect()

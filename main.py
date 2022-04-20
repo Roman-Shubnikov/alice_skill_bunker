@@ -20,23 +20,20 @@ def get_default_response() -> dict:
 
 
 class UserInfo(object):
-    def __init__(self, cards:dict={}, voites=0, hidden_cards:dict={},
+    def __init__(self, cards:dict={}, hidden_cards:dict={},
     json_load:dict={}
     ):
         if json_load == {}:
             self.cards = cards
             self.hidden_cards = hidden_cards
-            self.voites = voites
         else:
             self.cards = json_load['cards']
             self.hidden_cards = json_load['hidden_cards']
-            self.voites = json_load['voites']
 
     def to_json(self):
         res = {}
         res['cards'] = self.cards
         res['hidden_cards'] = self.hidden_cards
-        res['voites'] = self.voites
         return res
 
     def get_hidden_cards(self):
@@ -56,7 +53,7 @@ class UserInfo(object):
             return None
 
 class Response(object):
-    def __init__(self, stage, users_play, catastrophe, current_user_index=0, current_game_round=0, voiting=False, voiting_position=0):
+    def __init__(self, stage, users_play, catastrophe, current_user_index=0, current_game_round=0, voiting=False, current_user_moved=False):
         self.response = {
             'version': '1.0',
             'response': {
@@ -72,7 +69,7 @@ class Response(object):
         self.current_user_index = current_user_index
         self.current_game_round = current_game_round
         self.voiting = voiting
-        self.voiting_position = voiting_position
+        self.current_user_moved = current_user_moved
 
     def get_object(self):
         resp = self.response
@@ -83,7 +80,7 @@ class Response(object):
             'current_user_index': self.current_user_index,
             'current_game_round': self.current_game_round,
             'voiting': self.voiting,
-            'voiting_position': self.voiting_position
+            'current_user_moved': self.current_user_moved
         }
         return resp
 
@@ -110,7 +107,7 @@ class Response(object):
     def play_incorrect(self) -> dict:
         return self.play_message_body(config.default_messages['incorrect'])
 
-    def next_user(self) -> dict:
+    def next_user(self) -> tuple:
         index_last_user = len(self.users_play) - 1
         is_next_round = False
         if self.current_user_index + 1 > index_last_user:
@@ -151,9 +148,6 @@ class Response(object):
         return self.users_play
 
 
-
-
-
 @app.route('/handler', methods=['POST', 'GET'])
 def main():
     data = json.loads(request.data)
@@ -178,12 +172,19 @@ def main():
     command_tokens = u_request['nlu']['tokens']
     entities = u_request['nlu']['entities'] if 'nlu' in u_request and 'entities' in u_request['nlu'] else None
 
-    response = Response(stage, users_play, state['catastrophe'])
+    response = Response(stage, users_play, state['catastrophe'], 
+    state['current_user_index'],
+    state['current_game_round'],
+    state['voiting'],
+    state['current_user_moved'])
 
     #tests 
     if command_tokens[0] == 'tts':
         text_to_play = original_text [len(command_tokens[0]):]
         return response.play_message(text_to_play, text_to_play)
+
+    if u_request['markup']['dangerous_context']:
+        return response.play_message('С недоразвитыми не разговариваю')
 
     if 'повтори правила' in command:
         return response.get_rules()
@@ -229,9 +230,10 @@ def main():
                         users_play[first_name] = UserInfo(
                             {
                             'profession': random.choice(config.profession),
-                            'healh': random.choice(config.health),
+                            'health': random.choice(config.health),
                             'hobby':  random.choice(config.hobby),
                             'fear':  random.choice(config.fear),
+                            'personality': random.choice(config.person),
                             'addition_info':  random.choice(config.inform),
                             'special_card':  random.choice(config.specialmove)
                             },
@@ -239,6 +241,7 @@ def main():
                             {'здоровье': 'health'}, 
                             {'хобби': 'hobby'}, 
                             {'страхи': 'fear'}, 
+                            {'личные качества':'personality'},
                             {'дополнительная информация': 'addition_info'},
                             {'специальная': 'special_card'}]
                         )
@@ -249,69 +252,65 @@ def main():
 
     if stage == 'game':
         curr_user = response.get_user_by_index(response.current_user_index)
+        user_name = curr_user["name"].capitalize()
         info = curr_user['info']
         if response.voiting:
-            if command_tokens[0] == 'убери':
-                name_kick = command_tokens[1]
+            if command_tokens[1] in ['выбывает', 'вылетает']:
+                name_kick = command_tokens[0]
                 names = list(response.users_play)
                 if name_kick in names:
-                    next_user_name = list(response.users_play)[response.get_next_user_index()].capitalize()
-                    if response.voiting_position == response.get_next_user_index():
-                        voiting_list = {}
-                        for user in users_play:
-                            u_count = response.users_play[user]['voites']
-                            voiting_list[u_count] = user
-                        max_voites = max(list(voiting_list))
-                        kick_user_name = voiting_list[max_voites]
-                        response.users_play.pop(kick_user_name)
-                        user_question = f'По итогам голосования выбывает {kick_user_name}. Не расстраивайся! Выйграешь в другой раз. '
-                        if len(response.users_play) == 1:
-                            pass
-                        #     name_winner = list(response.users_play)[0]
-                        #     user_question += "Поздравляем! Игра закончилась. Победил {}"
-                    else:
-                        user_question = f'Теперь очередь следующего. {next_user_name}'
-                    return response.play_message(f'Хорошо, {name_kick} получил уже {response.users_play[name_kick].voites} голосов За. {user_question}')
+                    response.users_play.pop(name_kick)
+                    return response.play_message(f'Хорошо, {name_kick.capitalize()} выбывает')
                 else:
                     return response.play_message(f'Такой игрок с нами не играет. С нами играют: {", ".join(names)}')
+        
         if command == 'я закончил':
-            if response.current_game_round > 0:
-                cards = list(info.hidden_cards)
-                hidden_cards_read = ", ".join(cards)
-                rand_card = random.choice(cards)
-                return response.play_message(f'Вы можете открыть одну из карточек: {hidden_cards_read}.\nНапример скажите: "Алиса, открой карточку {rand_card}"')
-                
-        if command == 'я закончил' or len(list(info.hidden_cards)) == 0:
-            next_index = is_next_round = response.next_user()
+            if not response.current_user_moved:
+                return response.play_message('Вы не походили')
+            
+            response.current_user_moved = False
+            
+            next_user_index, is_next_round = response.next_user()
             if is_next_round and response.current_game_round > 1:
                 response.voiting = True
-                response.voiting_position = next_index
-                rand_user = random.choice(list(response.users_play))
-                starting_name = list(response.users_play)[response.current_user_index].capitalize()
-                return response.play_message(f'Проведём голосование кого надо оставить, а кого убрать. Я по очереди буду вас спрашивать, кого выгнать, а вы мне ответите: "Алиса, убери {rand_user.capitalize()}. Начинает - {starting_name}"')
-        
+                return response.play_message(f'Раунд завершился. Сейчас вам нужно решить, кто (один человек) не попадёт в бункер и озвучить мне его имя. Например: "Алиса, Дима выбывает"')
+            else:
+                next_user = response.get_user_by_index(next_user_index)
+                user_name = next_user["name"].capitalize()
+                addition_text = ''
+                cards = [list(i)[0] for i in next_user['info'].hidden_cards]
+                hidden_cards_read = ", ".join(cards)
+                rand_card = random.choice(cards)
+                if 'profession' in [i[list(i)[0]] for i in next_user['info'].hidden_cards]:
+                    addition_text += 'Скажите, когда будете готовы ходить.'
+                else:
+                    addition_text += f'Какую карточку характеристики открыть? {user_name}, можете открыть одну из карточек: {hidden_cards_read}.\nНапример скажите: "Алиса, открой карточку {rand_card}'
+                return response.play_message(f'Хорошо, тогда ход переходит {next_user["name"]}. {addition_text}')
+                
+    
         card_name = 'профессия'
-        if command_tokens[0] == 'открой':
-            card_name = command_tokens[1]
+        is_profession = 'profession' in 'profession' in [i[list(i)[0]] for i in curr_user['info'].hidden_cards]
+        if command_tokens[0] == 'открой' or is_profession:
+            response.current_user_moved = True
+            card_name = command_tokens[1] if not is_profession else 'профессия'
+            opened_card = info.open_card(card_name)
+            if opened_card is None:
+                return response.play_message('Извините карточка уже открыта')
+                # Извините карточка открыфть
+            card_key = opened_card['key']
+            response.replace_user_info(response.current_user_index, info)
 
-        if 'profession' in info.cards['profession']:
-            card_name = 'профессия'
-
-        opened_card = info.open_card(card_name)
-        if opened_card is None:
-            pass
-            # Извините карточка открыфть
-        card_key = opened_card['key']
-        response.replace_user_info(response.current_user_index, info)
-
-        if card_key == 'profession':
             
-            return response.play_message(
-                f'{curr_user["name"]}, Ваша профессия — {info.cards["profession"]["name"]}. Как закончите аргументацию, сообщите мне.\nНапример: "Алиса, я закончил".',
-                f'{curr_user["name"]} ваша профессия - {info.cards["profession"]["name_tts"]}. Как закончите аргументацию сообщите мне. Например: Алиса, я закончил'
-            )
-        elif card_key == 'health':
-            pass
+            if card_key == 'profession':
+                return response.play_message(
+                    f'{user_name}, Ваша профессия — {info.cards["profession"]["name"]}. Как закончите аргументацию, сообщите мне.\nНапример: "Алиса, я закончил".',
+                    f'{user_name} ваша профессия - {info.cards["profession"]["name_tts"]}. Как закончите аргументацию сообщите мне. Например: Алиса, я закончил'
+                )
+            elif card_key == 'health':
+                return response.play_message(
+                    f'{user_name}, на карточке Вашего здоровья написано: {info.cards["health"]["name"]}. Как закончите аргументацию, сообщите'
+                )
+
             
 
     return response.play_incorrect()

@@ -9,16 +9,6 @@ import config
 app = Flask(__name__)
 
 
-def get_default_response() -> dict:
-    default_response = {
-        'version': '1.0',
-        'response': {
-            'end_session': False
-        }
-    }
-    return default_response
-
-
 class UserInfo(object):
     def __init__(self, cards:dict={}, hidden_cards:dict={},
     json_load:dict={}
@@ -184,7 +174,7 @@ def main():
         return response.play_message(text_to_play, text_to_play)
 
     if u_request['markup']['dangerous_context']:
-        return response.play_message('С недоразвитыми не разговариваю')
+        return response.play_message('Не хочу вас понимать. Попробуйте говорить вежливее.')
 
     if 'повтори правила' in command:
         return response.get_rules()
@@ -207,11 +197,16 @@ def main():
         if 'повтори' in command:
             return response.play_message_body(config.default_messages['presentation_first_player'])
         if command in config.approve_phrases:
+            if len(response.users_play) < config.MIN_PLAYERS:
+                return response.play_message(
+                    f'Для этой игры нужно минимум 4 игрока. Позовите кого-нибудь ещё и начните игру повторно.',
+                    f'Для этой игры нужно минимум 4 игрока. Позовите кого нибудь ещё и начните игру повторно.'
+                )
             response.set_new_stage('game')
             response.set_new_curr_user(
                 random.randint(0, len(response.users_play) - 1))
             catastrophe = config.catastrophes[response.catastrophe]
-            return response.play_message(f'Приступим к игре. Случилась катастрофа ' + catastrophe['name'] + '. ' + catastrophe['description'] + '. Начинаем?',
+            return response.play_message(f'Приступим к игре. Случилась катастрофа ' + catastrophe['name'] + '.\n' + catastrophe['description'] + '.\nНачинаем?',
                                          f'Приступим к игре. Случилась катастрофа ' +
                                          catastrophe['name'] + '. ' +
                                          catastrophe['description'] +
@@ -247,8 +242,8 @@ def main():
                         )
                         response.set_new_users_play(users_play)
                         return response.play_message(
-                            f'Отлично, {first_name.capitalize()}! Кто следующий?\nЕсли все игроки уже присоединились, скажите: "Алиса, мы готовы"',
-                            f'Отлично {first_name}! Кто следующий? Если все игроки уже присоединились, скажите: Алиса мы готовы')
+                            f'Отлично! Кто следующий?\nЕсли все игроки уже присоединились, скажите: "Алиса, мы готовы"',
+                            f'Отлично! - Кто следующий? - - - Если все игроки присоединились, скажите: Алиса - - мы готовы')
 
     if stage == 'game':
         curr_user = response.get_user_by_index(response.current_user_index)
@@ -262,7 +257,7 @@ def main():
                     response.users_play.pop(name_kick)
                     return response.play_message(f'Хорошо, {name_kick.capitalize()} выбывает')
                 else:
-                    return response.play_message(f'Такой игрок с нами не играет. С нами играют: {", ".join(names)}')
+                    return response.play_message(f'Такой игрок с нами не играет. С нами играют: {", ".join(names)}', f'Такой игрок с нами не играет. С нами играют: {", -".join(names)}')
         
         if command == 'я закончил':
             if not response.current_user_moved:
@@ -273,7 +268,7 @@ def main():
             next_user_index, is_next_round = response.next_user()
             if is_next_round and response.current_game_round > 1:
                 response.voiting = True
-                return response.play_message(f'Раунд завершился. Сейчас вам нужно решить, кто (один человек) не попадёт в бункер и озвучить мне его имя. Например: "Алиса, Дима выбывает"')
+                return response.play_message(f'Раунд завершился. Сейчас вам нужно решить, кто (один человек) не попадёт в бункер и озвучить мне его имя. Например: "Алиса, Дима выбывает"', 'Раунд завершился. - Сейчас вам нужно решить, кто не попадёт в бункер и озвучить мне его имя. Например: "Алиса, Дима выбывает"')
             else:
                 next_user = response.get_user_by_index(next_user_index)
                 user_name = next_user["name"].capitalize()
@@ -285,7 +280,7 @@ def main():
                     addition_text += 'Скажите, когда будете готовы ходить.'
                 else:
                     addition_text += f'Какую карточку характеристики открыть? {user_name}, можете открыть одну из карточек: {hidden_cards_read}.\nНапример скажите: "Алиса, открой карточку {rand_card}'
-                return response.play_message(f'Хорошо, тогда ход переходит {next_user["name"]}. {addition_text}')
+                return response.play_message(f'Хорошо! {next_user["name"]} ходит. {addition_text}', f'Хорошо! {next_user["name"]} ходит. {addition_text}')
                 
     
         card_name = 'профессия'
@@ -295,8 +290,7 @@ def main():
             card_name = command_tokens[1] if not is_profession else 'профессия'
             opened_card = info.open_card(card_name)
             if opened_card is None:
-                return response.play_message('Извините карточка уже открыта')
-                # Извините карточка открыфть
+                return response.play_message('Извините, но карточка уже открыта.', 'Извините, но карточка уже открыта.')
             card_key = opened_card['key']
             response.replace_user_info(response.current_user_index, info)
 
@@ -304,13 +298,33 @@ def main():
             if card_key == 'profession':
                 return response.play_message(
                     f'{user_name}, Ваша профессия — {info.cards["profession"]["name"]}. Как закончите аргументацию, сообщите мне.\nНапример: "Алиса, я закончил".',
-                    f'{user_name} ваша профессия - {info.cards["profession"]["name_tts"]}. Как закончите аргументацию сообщите мне. Например: Алиса, я закончил'
+                    f'{user_name}, - ваша профессия - {info.cards["profession"]["name_tts"]}. Как закончите аргументацию - сообщите мне. Например: - Алиса, - я закончил'
                 )
             elif card_key == 'health':
                 return response.play_message(
-                    f'{user_name}, на карточке Вашего здоровья написано: {info.cards["health"]["name"]}. Как закончите аргументацию, сообщите'
+                    f'{user_name}, на Вашей карточке здоровья написано: {info.cards["health"]["name"]}. Как закончите аргументацию, скажите об этом мне.\nНапример: "Алиса, я закончил".',
+                    f'{user_name}, - на Вашей карточке здоровья написано: - {info.cards["health"]["name"]}. Как закончите аргументацию - скажите об этом мне. Например: - Алиса, - я закончил.'   
                 )
-
+            elif card_key == 'hobby':
+                return response.play_message(
+                    f'{user_name}, на Вашей карточке хобби написано: {info.cards["hobby"]["name"]}. После агрументации сообщите мне о том, что Вы закончили.\nНапример, "Алиса, я закончил".',
+                    f'{user_name}, - на Вашей карточке хобби написано: - {info.cards["hobby"]["name"]}. После агрументации сообщите мне о том - что Вы закончили. Например: - Алиса, - я закончил.'
+                )
+            elif card_key == 'fear':
+                return response.play_message(
+                    f'{user_name}, на Вашей карточке страха написано: {info.cards["fear"]["name"]}. Как закончите аргументацию, скажите об этом мне.\nНапример: "Алиса, я закончил".',
+                    f'{user_name}, - на Вашей карточке страха написано: - {info.cards["fear"]["name"]}. Как закончите аргументацию - скажите об этом мне. Например: - Алиса, - я закончил.'
+                )
+            elif card_key == 'personality':
+                return response.play_message(
+                    f'{user_name}, на Вашей карточке личных качеств написано: {info.cards["personality"]["name"]}. Как закончите аргументацию, скажите об этом мне.\nНапример: "Алиса, я закончил".',
+                    f'{user_name}, - на Вашей карточке личных качеств написано: - {info.cards["personality"]["name"]}. Как закончите аргументацию - скажите об этом мне. Например: - Алиса, - я закончил.'   
+                )
+            elif card_key == 'addition_info':
+                return response.play_message(
+                    f'{user_name}, на Вашей карточке дополнительной информации написано: {info.cards["addition_info"]["name"]}. После агрументации, сообщите мне о том, что Вы закончили.\nНапример, "Алиса, я закончил".',
+                    f'{user_name}, - на Вашей карточке дополнительной информации написано: - {info.cards["addition_info"]["name"]}. После агрументации сообщите мне о том - что Вы закончили. Например: - Алиса, - я закончил.'
+                )
             
 
     return response.play_incorrect()

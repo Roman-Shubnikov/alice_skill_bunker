@@ -1,4 +1,3 @@
-from tkinter import E
 from flask import Flask
 from flask import request
 import json
@@ -210,7 +209,7 @@ def main():
                                          f'Приступим к игре. Случилась катастрофа ' +
                                          catastrophe['name'] + '. ' +
                                          catastrophe['description'] +
-                                         '. Начинаем?',
+                                         '. Начинаем?'
                                          )
         if entities is not None:
             for item in entities:
@@ -268,7 +267,8 @@ def main():
             next_user_index, is_next_round = response.next_user()
             if is_next_round and response.current_game_round > 1:
                 response.voiting = True
-                return response.play_message(f'Раунд завершился. Сейчас вам нужно решить, кто (один человек) не попадёт в бункер и озвучить мне его имя. Например: "Алиса, Дима выбывает"', 'Раунд завершился. - Сейчас вам нужно решить, кто не попадёт в бункер и озвучить мне его имя. Например: "Алиса, Дима выбывает"')
+                return response.play_message(f'Раунд завершился. Сейчас вам нужно решить, кто (один человек) не попадёт в бункер и озвучить мне его имя. Например: "Алиса, Дима выбывает"',
+                                                'Раунд завершился. - Сейчас вам нужно решить, кто не попадёт в бункер и озвучить мне его имя. Например: "Алиса, Дима выбывает"')
             else:
                 next_user = response.get_user_by_index(next_user_index)
                 user_name = next_user["name"].capitalize()

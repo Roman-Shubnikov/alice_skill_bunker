@@ -249,14 +249,15 @@ def main():
         user_name = curr_user["name"].capitalize()
         info = curr_user['info']
         if response.voiting:
-            if command_tokens[1] in ['выбывает', 'вылетает']:
+            if command_tokens[1] in ['выбывает', 'вылетает', 'убывает', 'бывает', 'убивает', 'побывает']:
                 name_kick = command_tokens[0]
-                names = list(response.users_play)
-                if name_kick in names:
+                names = [i.capitalize() for i in list(response.users_play)]
+                if name_kick in list(response.users_play):
                     response.users_play.pop(name_kick)
                     return response.play_message(f'Хорошо, {name_kick.capitalize()} выбывает')
                 else:
-                    return response.play_message(f'Такой игрок с нами не играет. С нами играют: {", ".join(names)}', f'Такой игрок с нами не играет. С нами играют: {", -".join(names)}')
+                    names_kick = names[0] + ' и ' + names[1] if len(names) < 3 else ", ".join(names [:len(names) - 2]) + ' и ' + names[len(names) - 1]
+                    return response.play_message(f'Такой игрок с нами не играет. С нами играют: {names_kick}', f'Такой игрок с нами не играет. С нами играют: {names_kick}')
         
         if command == 'я закончил':
             if not response.current_user_moved:
@@ -280,14 +281,14 @@ def main():
                     addition_text += 'Скажите, когда будете готовы ходить.'
                 else:
                     addition_text += f'Какую карточку характеристики открыть? {user_name}, можете открыть одну из карточек: {hidden_cards_read}.\nНапример скажите: "Алиса, открой карточку {rand_card}'
-                return response.play_message(f'Хорошо! {next_user["name"]} ходит. {addition_text}', f'Хорошо! {next_user["name"]} ходит. {addition_text}')
+                return response.play_message(f'Хорошо! {user_name} ходит. {addition_text}', f'Хорошо! {user_name} ходит. {addition_text}')
                 
     
         card_name = 'профессия'
         is_profession = 'profession' in 'profession' in [i[list(i)[0]] for i in curr_user['info'].hidden_cards]
         if command_tokens[0] == 'открой' or is_profession:
             response.current_user_moved = True
-            card_name = command_tokens[1] if not is_profession else 'профессия'
+            card_name = command_tokens[2] if not is_profession else 'профессия'
             opened_card = info.open_card(card_name)
             if opened_card is None:
                 return response.play_message('Извините, но карточка уже открыта.', 'Извините, но карточка уже открыта.')

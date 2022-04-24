@@ -1,3 +1,4 @@
+from dataclasses import replace
 from flask import Flask
 from flask import request
 import json
@@ -309,33 +310,79 @@ def main():
                     return response.play_message(special_card['name'], special_card['name_tts'])
                     
                 elif special_card['type'] == 'heal':
-                    pass
+                    users_play[user_name]['health'] = 'Здоровый'
+                    response.set_users_play(users_play)
+                    return response.play_message(special_card['name'], special_card['name_tts'])
+
                 elif special_card['type'] == 'del_space_bunker':
                     response.space_on_bunker -= 1
                     return response.play_message(special_card['name'], special_card['name_tts'])
                 
                 elif special_card['type'] == 'fake_profession':
-                    pass
+                    users_play[user_name]['profession'] = random.choice(config.profession)
+                    response.set_users_play(users_play)
+                    return response.play_message(special_card['name'], special_card['name_tts'])
+
                 elif special_card['type'] == 'bad_tablet':
-                    pass
+                    pass # Хз, как мне случайно выбрать другого игрока и сменить; Или будем как-то инначе делать?
+
                 elif special_card['type'] == 'plan_b':
-                    pass
+                    pass # Тут вообще хз, как это навоять
+
                 elif special_card['type'] == 'ineed_info':
-                    pass
+                    pass # Хз как выбрать игрока, поэтому просто пока обозначил переменную ;D
+                    choosed_user = 0
+                    users_play[user_name]['addition_info'] = users_play[choosed_user]['addition_info']
+                    users_play[choosed_user]['addition_info'] = random.choice(config.inform)
+                    response.set_users_play(users_play)
+                    return response.play_message(special_card['name'], special_card['name_tts'])
+
                 elif special_card['type'] == 'steal':
-                    pass
+                    pass # Тут хз как выбрать игрока и его карту, поэтому также переменные, как и выше
+                    #choosed_user = 0
+                    #choosed_card = '0'
+                    #users_play[choosed_user][choosed_card] = random.choice(config.)
+                    # По итогу я упёрся в очередное хз, касаемо сопоставления выбранной карты с config'ом
+
                 elif special_card['type'] == 'radomise_all':
-                    pass
+                    pass # Тут не уверен, как идти по игрокам. Но возможно сделаю после 20:30
+
                 elif special_card['type'] == 'diverse':
-                    pass
+                    pass # Хз как выбрать карту, поэтому пока переменной
+                    #choosed_card = '0'
+                    #users_play[choosed_user]['addition_info'] = random.choice(config.)
+                    #response.set_users_play(users_play)
+                    # Такая же ситуация, как в строке 344
+
                 elif special_card['type'] == 'replace_info':
-                    pass
+                    pass # Хз как выбрать игрока, поэтому опять переменная
+                    choosed_user = 0
+                    users_play[user_name]['addition_info'], users_play[choosed_user]['addition_info'] = users_play[choosed_user]['addition_info'], users_play[user_name]['addition_info']
+                    response.set_users_play(users_play)
+                    return response.play_message(special_card['name'], special_card['name_tts'])
+
                 elif special_card['type'] == 'replace_profession':
-                    pass
+                    pass # Тоже самое, что выше только для профки
+                    choosed_user = 0
+                    users_play[user_name]['proffesion'], users_play[choosed_user]['proffesion'] = users_play[choosed_user]['proffesion'], users_play[user_name]['proffesion']
+                    response.set_users_play(users_play)
+                    return response.play_message(special_card['name'], special_card['name_tts'])
+
                 elif special_card['type'] == 'replace_health':
-                    pass
+                    pass # Тоже самое, что выше только для здоровья
+                    choosed_user = 0
+                    users_play[user_name]['health'], users_play[choosed_user]['health'] = users_play[choosed_user]['health'], users_play[user_name]['health']
+                    response.set_users_play(users_play)
+                    return response.play_message(special_card['name'], special_card['name_tts'])
+
                 elif special_card['type'] == 'good_tablet':
-                    pass 
+                    pass # Хз как выбрать игрока, поэтому переменная
+                    choosed_user = 0
+                    users_play[user_name]['health'] = users_play[choosed_user]['health']
+                    users_play[choosed_user]['health'] = random.choice(config.inform)
+                    response.set_users_play(users_play)
+                    return response.play_message(special_card['name'], special_card['name_tts'])
+                
             else:
                 response.current_user_moved = True
                 card_name = command_tokens[2] if not is_profession else 'профессия'

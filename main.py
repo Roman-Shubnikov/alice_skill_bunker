@@ -268,8 +268,18 @@ def main():
                 if name_kick in list(response.users_play):
                     response.users_play.pop(name_kick)
                     if response.space_on_bunker >= len(response.users_play):
-                        pass#Конец игры
-                    return response.play_message(f'Хорошо, {name_kick.capitalize()} выбывает')
+                        addition_names = f'{names[0]}'
+                        for i in range(1, len(names)):
+                            addition_names += f', {names[i]}'
+                        response.set_new_stage('game')
+                        return response.play_message(f'Игра закончилась. В бункер попали: {addition_names}. Желаете начать новую игру?')
+                    response.voiting = False
+                    next_user = response.get_user_by_index(next_user_index)
+                    user_name = next_user["name"].capitalize()
+                    cards = [list(i)[0] for i in next_user['info'].hidden_cards]
+                    hidden_cards_read = ", ".join(cards)
+                    rand_card = random.choice(cards)
+                    return response.play_message(f'{name_kick.capitalize()} остаётся встречать катастрофу за дверьми бункера. Какую карточку характеристики открыть? {user_name}, можете открыть одну из карточек: {hidden_cards_read}.\nНапример скажите: "Алиса, открой карточку {rand_card}')
                 else:
                     names_kick = gen_enumirate_text(names)
                     return response.play_message(f'Такой игрок с нами не играет. С нами играют: {names_kick}', f'Такой игрок с нами не играет. С нами играют: {names_kick}')
@@ -301,132 +311,53 @@ def main():
         card_name = 'профессия'
         is_profession = 'profession' in 'profession' in [i[list(i)[0]] for i in curr_user['info'].hidden_cards]
         if command_tokens[0] == 'открой' or is_profession:
-            if True in [i in ['специальная', 'специальную'] for i in command_tokens]:
-                special_card = info.cards['special_card']
-                if special_card['type'] == 'voice':
-                    return response.play_message(special_card['name'], special_card['name_tts'])
-                elif special_card['type'] == 'plus_space_bunker':
-                    response.space_on_bunker += 1
-                    return response.play_message(special_card['name'], special_card['name_tts'])
-                    
-                elif special_card['type'] == 'heal':
-                    users_play[user_name]['health'] = 'Здоровый'
-                    response.set_users_play(users_play)
-                    return response.play_message(special_card['name'], special_card['name_tts'])
+            response.current_user_moved = True
+            card_name = command_tokens[2] if not is_profession else 'профессия'
+            opened_card = info.open_card(card_name)
+            if opened_card is None:
+                return response.play_message('Извините, но карточка уже открыта.')
+            card_key = opened_card['key']
+            response.replace_user_info(response.current_user_index, info)
 
-                elif special_card['type'] == 'del_space_bunker':
-                    response.space_on_bunker -= 1
-                    return response.play_message(special_card['name'], special_card['name_tts'])
-                
-                elif special_card['type'] == 'fake_profession':
-                    users_play[user_name]['profession'] = random.choice(config.profession)
-                    response.set_users_play(users_play)
-                    return response.play_message(special_card['name'], special_card['name_tts'])
-
-                elif special_card['type'] == 'bad_tablet':
-                    pass # Хз, как мне случайно выбрать другого игрока и сменить; Или будем как-то инначе делать?
-
-                elif special_card['type'] == 'plan_b':
-                    pass # Тут вообще хз, как это навоять
-
-                elif special_card['type'] == 'ineed_info':
-                    pass # Хз как выбрать игрока, поэтому просто пока обозначил переменную ;D
-                    choosed_user = 0
-                    users_play[user_name]['addition_info'] = users_play[choosed_user]['addition_info']
-                    users_play[choosed_user]['addition_info'] = random.choice(config.inform)
-                    response.set_users_play(users_play)
-                    return response.play_message(special_card['name'], special_card['name_tts'])
-
-                elif special_card['type'] == 'steal':
-                    pass # Тут хз как выбрать игрока и его карту, поэтому также переменные, как и выше
-                    #choosed_user = 0
-                    #choosed_card = '0'
-                    #users_play[choosed_user][choosed_card] = random.choice(config.)
-                    # По итогу я упёрся в очередное хз, касаемо сопоставления выбранной карты с config'ом
-
-                elif special_card['type'] == 'radomise_all':
-                    pass # Тут не уверен, как идти по игрокам. Но возможно сделаю после 20:30
-
-                elif special_card['type'] == 'diverse':
-                    pass # Хз как выбрать карту, поэтому пока переменной
-                    #choosed_card = '0'
-                    #users_play[choosed_user]['addition_info'] = random.choice(config.)
-                    #response.set_users_play(users_play)
-                    # Такая же ситуация, как в строке 344
-
-                elif special_card['type'] == 'replace_info':
-                    pass # Хз как выбрать игрока, поэтому опять переменная
-                    choosed_user = 0
-                    users_play[user_name]['addition_info'], users_play[choosed_user]['addition_info'] = users_play[choosed_user]['addition_info'], users_play[user_name]['addition_info']
-                    response.set_users_play(users_play)
-                    return response.play_message(special_card['name'], special_card['name_tts'])
-
-                elif special_card['type'] == 'replace_profession':
-                    pass # Тоже самое, что выше только для профки
-                    choosed_user = 0
-                    users_play[user_name]['proffesion'], users_play[choosed_user]['proffesion'] = users_play[choosed_user]['proffesion'], users_play[user_name]['proffesion']
-                    response.set_users_play(users_play)
-                    return response.play_message(special_card['name'], special_card['name_tts'])
-
-                elif special_card['type'] == 'replace_health':
-                    pass # Тоже самое, что выше только для здоровья
-                    choosed_user = 0
-                    users_play[user_name]['health'], users_play[choosed_user]['health'] = users_play[choosed_user]['health'], users_play[user_name]['health']
-                    response.set_users_play(users_play)
-                    return response.play_message(special_card['name'], special_card['name_tts'])
-
-                elif special_card['type'] == 'good_tablet':
-                    pass # Хз как выбрать игрока, поэтому переменная
-                    choosed_user = 0
-                    users_play[user_name]['health'] = users_play[choosed_user]['health']
-                    users_play[choosed_user]['health'] = random.choice(config.inform)
-                    response.set_users_play(users_play)
-                    return response.play_message(special_card['name'], special_card['name_tts'])
-                
-            else:
-                response.current_user_moved = True
-                card_name = command_tokens[2] if not is_profession else 'профессия'
-                opened_card = info.open_card(card_name)
-                if opened_card is None:
-                    return response.play_message('Извините, но карточка уже открыта.')
-                card_key = opened_card['key']
-                response.replace_user_info(response.current_user_index, info)
-
-                
-                if card_key == 'profession':
-                    return response.play_message(
-                        f'{user_name}, Ваша профессия — {info.cards["profession"]["name"]}. Как закончите аргументацию, сообщите мне.\nНапример: "Алиса, я закончил".',
-                        f'{user_name}, - ваша профессия - {info.cards["profession"]["name_tts"]}. Как закончите аргументацию - сообщите мне. Например: - Алиса, - я закончил'
-                    )
-                elif card_key == 'health':
-                    return response.play_message(
-                        f'{user_name}, на Вашей карточке здоровья написано: {info.cards["health"]["name"]}. Как закончите аргументацию, скажите об этом мне.\nНапример: "Алиса, я закончил".',
-                        f'{user_name}, - на Вашей карточке здоровья написано: - {info.cards["health"]["name"]}. Как закончите аргументацию - скажите об этом мне. Например: - Алиса, - я закончил.'   
-                    )
-                elif card_key == 'hobby':
-                    return response.play_message(
-                        f'{user_name}, на Вашей карточке хобби написано: {info.cards["hobby"]["name"]}. После агрументации сообщите мне о том, что Вы закончили.\nНапример, "Алиса, я закончил".',
-                        f'{user_name}, - на Вашей карточке хобби написано: - {info.cards["hobby"]["name"]}. После агрументации сообщите мне о том - что Вы закончили. Например: - Алиса, - я закончил.'
-                    )
-                elif card_key == 'fear':
-                    return response.play_message(
-                        f'{user_name}, на Вашей карточке страха написано: {info.cards["fear"]["name"]}. Как закончите аргументацию, скажите об этом мне.\nНапример: "Алиса, я закончил".',
-                        f'{user_name}, - на Вашей карточке страха написано: - {info.cards["fear"]["name"]}. Как закончите аргументацию - скажите об этом мне. Например: - Алиса, - я закончил.'
-                    )
-                elif card_key == 'personality':
-                    return response.play_message(
-                        f'{user_name}, на Вашей карточке личных качеств написано: {info.cards["personality"]["name"]}. Как закончите аргументацию, скажите об этом мне.\nНапример: "Алиса, я закончил".',
-                        f'{user_name}, - на Вашей карточке личных качеств написано: - {info.cards["personality"]["name"]}. Как закончите аргументацию - скажите об этом мне. Например: - Алиса, - я закончил.'   
-                    )
-                elif card_key == 'addition_info':
-                    return response.play_message(
-                        f'{user_name}, на Вашей карточке дополнительной информации написано: {info.cards["addition_info"]["name"]}. После агрументации, сообщите мне о том, что Вы закончили.\nНапример, "Алиса, я закончил".',
-                        f'{user_name}, - на Вашей карточке дополнительной информации написано: - {info.cards["addition_info"]["name"]}. После агрументации сообщите мне о том - что Вы закончили. Например: - Алиса, - я закончил.'
-                    )
             
+            if card_key == 'profession':
+                return response.play_message(
+                    f'{user_name}, Ваша профессия — {info.cards["profession"]["name"]}. Как закончите аргументацию, сообщите мне.\nНапример: "Алиса, я закончил".',
+                    f'{user_name}, - ваша профессия - {info.cards["profession"]["name_tts"]}. Как закончите аргументацию - сообщите мне. Например: - Алиса, - я закончил'
+                )
+            elif card_key == 'health':
+                return response.play_message(
+                    f'{user_name}, на Вашей карточке здоровья написано: {info.cards["health"]["name"]}. Как закончите аргументацию, скажите об этом мне.\nНапример: "Алиса, я закончил".',
+                    f'{user_name}, - на Вашей карточке здоровья написано: - {info.cards["health"]["name"]}. Как закончите аргументацию - скажите об этом мне. Например: - Алиса, - я закончил.'   
+                )
+            elif card_key == 'hobby':
+                return response.play_message(
+                    f'{user_name}, на Вашей карточке хобби написано: {info.cards["hobby"]["name"]}. После агрументации сообщите мне о том, что Вы закончили.\nНапример, "Алиса, я закончил".',
+                    f'{user_name}, - на Вашей карточке хобби написано: - {info.cards["hobby"]["name"]}. После агрументации сообщите мне о том - что Вы закончили. Например: - Алиса, - я закончил.'
+                )
+            elif card_key == 'fear':
+                return response.play_message(
+                    f'{user_name}, на Вашей карточке страха написано: {info.cards["fear"]["name"]}. Как закончите аргументацию, скажите об этом мне.\nНапример: "Алиса, я закончил".',
+                    f'{user_name}, - на Вашей карточке страха написано: - {info.cards["fear"]["name"]}. Как закончите аргументацию - скажите об этом мне. Например: - Алиса, - я закончил.'
+                )
+            elif card_key == 'personality':
+                return response.play_message(
+                    f'{user_name}, на Вашей карточке личных качеств написано: {info.cards["personality"]["name"]}. Как закончите аргументацию, скажите об этом мне.\nНапример: "Алиса, я закончил".',
+                    f'{user_name}, - на Вашей карточке личных качеств написано: - {info.cards["personality"]["name"]}. Как закончите аргументацию - скажите об этом мне. Например: - Алиса, - я закончил.'   
+                )
+            elif card_key == 'addition_info':
+                return response.play_message(
+                    f'{user_name}, на Вашей карточке дополнительной информации написано: {info.cards["addition_info"]["name"]}. После агрументации, сообщите мне о том, что Вы закончили.\nНапример, "Алиса, я закончил".',
+                    f'{user_name}, - на Вашей карточке дополнительной информации написано: - {info.cards["addition_info"]["name"]}. После агрументации сообщите мне о том - что Вы закончили. Например: - Алиса, - я закончил.'
+                    )
+
+    if stage == 'end_game':
+        if command in config.approve_phrases:
+            response.set_new_stage('approve_hello')
+            return response.play_message('Начинаю новую игру.')
 
     return response.play_incorrect()
 
 
 if __name__ == '__main__':
-    app.run(port=3020, debug=True)
+    app.run(port=2096, debug=True)

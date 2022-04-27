@@ -196,6 +196,8 @@ def main():
         if command in config.approve_phrases:
             response.set_new_stage('approve_rules')
             return response.get_rules('Начинаем?', 'Начинаем?')
+        not_approved = 'К сожалению, я не поняла Вас. Если вы не готовы начать просто, закройте навык или подготвьтесь и сообщите когда всё сделаете.\nнапример: "Алиса, мы готовы".'
+        return response.play_message(not_approved)
 
     if stage == 'approve_rules':
         if 'повтори' in command:
@@ -256,6 +258,10 @@ def main():
                         return response.play_message(
                             f'Отлично! Кто следующий?\nЕсли все игроки уже присоединились, скажите: "Алиса, мы готовы"',
                             f'Отлично! - Кто следующий? - - - Если все игроки присоединились, скажите: Алиса - - мы готовы')
+        else:
+            not_approved = 'Я вас немного не поняла. Можете ещё раз представится? Например: "Алиса, я Анатолий".'
+            return response.play_message(not_approved)
+
 
     if stage == 'game':
         curr_user = response.get_user_by_index(response.current_user_index)
@@ -318,8 +324,8 @@ def main():
                 return response.play_message('Извините, но карточка уже открыта.')
             card_key = opened_card['key']
             response.replace_user_info(response.current_user_index, info)
-
             
+
             if card_key == 'profession':
                 return response.play_message(
                     f'{user_name}, Ваша профессия — {info.cards["profession"]["name"]}. Как закончите аргументацию, сообщите мне.\nНапример: "Алиса, я закончил".',
@@ -350,14 +356,19 @@ def main():
                     f'{user_name}, на Вашей карточке дополнительной информации написано: {info.cards["addition_info"]["name"]}. После агрументации, сообщите мне о том, что Вы закончили.\nНапример, "Алиса, я закончил".',
                     f'{user_name}, - на Вашей карточке дополнительной информации написано: - {info.cards["addition_info"]["name"]}. После агрументации сообщите мне о том - что Вы закончили. Например: - Алиса, - я закончил.'
                     )
+        else:
+            response.play_incorrect()
 
     if stage == 'end_game':
         if command in config.approve_phrases:
             response.set_new_stage('approve_hello')
             return response.play_message('Начинаю новую игру.')
+        if command in ['нет', 'не хочу']:
+            return response.play_message('Хорошо! Будет скучно обращайтесь!')
+        else:
+            return response.play_message('Я не поняла Вас. Вы желаете начать новую игру?')
 
     return response.play_incorrect()
-
 
 if __name__ == '__main__':
     app.run(port=2096, debug=True)

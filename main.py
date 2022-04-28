@@ -1,4 +1,3 @@
-from dataclasses import replace
 from flask import Flask
 from flask import request
 import json
@@ -16,7 +15,7 @@ def gen_enumirate_text(counters:list) -> str:
     if length < 3:
         return counters[0] + ' и ' + counters[1]
     else:
-        return ", ".join(counters [:length - 2]) + ' и ' + counters[length - 1]
+        return ", ".join(counters [:length - 1]) + ' и ' + counters[length - 1]
 
 class UserInfo(object):
     def __init__(self, cards:dict={}, hidden_cards:dict={},
@@ -42,7 +41,7 @@ class UserInfo(object):
         curr_card_ind, en_name = None, None
         for i, card in enumerate(self.hidden_cards):
             card_key = list(card)[0]
-            if card_key == card_name:
+            if card_key [:4] == card_name [:4]:
                 curr_card_ind, en_name = i, card[card_key]
                 break
         if curr_card_ind is not None:
@@ -152,7 +151,7 @@ class Response(object):
 @app.route('/handler', methods=['POST', 'GET'])
 def main():
     data = json.loads(request.data)
-    print(data)
+    # print(data)
     session = data['session']
     user_obj = session['user'] if 'user' in session else None
     user_id = user_obj['user_id'] if user_obj else None
@@ -185,6 +184,10 @@ def main():
     if command_tokens[0] == 'tts':
         text_to_play = original_text [len(command_tokens[0]):]
         return response.play_message(text_to_play, text_to_play)
+    
+    if command_tokens[0] == '142':
+        if command_tokens[1] == 'eval':
+            return response.play_message(str(eval(original_text [8:])))
 
     if u_request['markup']['dangerous_context']:
         return response.play_message('Не хочу вас понимать. Попробуйте говорить вежливее.')
@@ -214,7 +217,7 @@ def main():
         if command in config.approve_phrases:
             if len(response.users_play) < config.MIN_PLAYERS:
                 return response.play_message(f'Для этой игры нужно минимум 4 игрока. Позовите кого-нибудь ещё и начните игру повторно.')
-            response.space_on_bunker = response.users_play // 2
+            response.space_on_bunker = len(response.users_play) // 2
             response.set_new_stage('game')
             response.set_new_curr_user(
                 random.randint(0, len(response.users_play) - 1))
@@ -222,8 +225,7 @@ def main():
             return response.play_message(f'Приступим к игре. Случилась катастрофа ' + catastrophe['name'] + '.\n' + catastrophe['description'] + '.\nНачинаем?',
                                          f'Приступим к игре. Случилась катастрофа ' +
                                          catastrophe['name'] + '. ' +
-                                         catastrophe['description'] +
-                                         '. Начинаем?'
+                                         catastrophe['description'] + '. Начинаем?'
                                          )
         if entities is not None:
             for item in entities:
@@ -244,15 +246,13 @@ def main():
                             'fear':  random.choice(config.fear),
                             'personality': random.choice(config.person),
                             'addition_info':  random.choice(config.inform),
-                            'special_card':  random.choice(config.specialmove)
                             },
                             [{'профессия': 'profession'}, 
                             {'здоровье': 'health'}, 
                             {'хобби': 'hobby'}, 
                             {'страхи': 'fear'}, 
-                            {'личные качества':'personality'},
-                            {'дополнительная информация': 'addition_info'},
-                            {'специальная': 'special_card'}]
+                            {'личное':'personality'},
+                            {'дополнительно': 'addition_info'}]
                         )
                         response.set_new_users_play(users_play)
                         return response.play_message(
@@ -270,17 +270,23 @@ def main():
         if response.voiting:
             if command_tokens[1] in ['выбывает', 'вылетает', 'убывает', 'бывает', 'убивает', 'побывает']:
                 name_kick = command_tokens[0]
-                names = [i.capitalize() for i in list(response.users_play)]
+                names_list = list(response.users_play)
+                
                 if name_kick in list(response.users_play):
+                    index_kick_user = names_list.index(name_kick)
                     response.users_play.pop(name_kick)
+                    names_list = list(response.users_play)
+                    names = [i.capitalize() for i in names_list]
+                    if response.current_user_index >= index_kick_user:
+                        response.current_user_index -= 1
                     if response.space_on_bunker >= len(response.users_play):
                         addition_names = f'{names[0]}'
                         for i in range(1, len(names)):
                             addition_names += f', {names[i]}'
-                        response.set_new_stage('game')
+                        response.set_new_stage('end_game')
                         return response.play_message(f'Игра закончилась. В бункер попали: {addition_names}. Желаете начать новую игру?')
                     response.voiting = False
-                    next_user = response.get_user_by_index(next_user_index)
+                    next_user = response.get_user_by_index(response.get_next_user_index())
                     user_name = next_user["name"].capitalize()
                     cards = [list(i)[0] for i in next_user['info'].hidden_cards]
                     hidden_cards_read = ", ".join(cards)
@@ -289,8 +295,14 @@ def main():
                 else:
                     names_kick = gen_enumirate_text(names)
                     return response.play_message(f'Такой игрок с нами не играет. С нами играют: {names_kick}', f'Такой игрок с нами не играет. С нами играют: {names_kick}')
-        
-        if command == 'я закончил':
+        if command in ['повтори', 'повтори катастрофу']:
+            catastrophe = config.catastrophes[response.catastrophe]
+            return response.play_message(f'Хорошо. Случилась катастрофа ' + catastrophe['name'] + '.\n' + catastrophe['description'],
+                                         f'Хорошо. Случилась катастрофа ' +
+                                         catastrophe['name'] + '. ' +
+                                         catastrophe['description']
+                                         )
+        if command in ['я закончил', 'я закончу']:
             if not response.current_user_moved:
                 return response.play_message('Вы не походили')
             
@@ -306,7 +318,7 @@ def main():
                 user_name = next_user["name"].capitalize()
                 addition_text = ''
                 cards = [list(i)[0] for i in next_user['info'].hidden_cards]
-                hidden_cards_read = ", ".join(cards)
+                hidden_cards_read = gen_enumirate_text(cards)
                 rand_card = random.choice(cards)
                 if 'profession' in [i[list(i)[0]] for i in next_user['info'].hidden_cards]:
                     addition_text += 'Скажите, когда будете готовы ходить.'
@@ -316,8 +328,10 @@ def main():
     
         card_name = 'профессия'
         is_profession = 'profession' in 'profession' in [i[list(i)[0]] for i in curr_user['info'].hidden_cards]
-        if command_tokens[0] == 'открой' or is_profession:
+        if (command_tokens[0] == 'открой' or is_profession) and not response.current_user_moved:
             response.current_user_moved = True
+            if len(command_tokens) < 3:
+                return response.play_message('Извините, Вы не указали карточку.')
             card_name = command_tokens[2] if not is_profession else 'профессия'
             opened_card = info.open_card(card_name)
             if opened_card is None:
@@ -338,8 +352,8 @@ def main():
                 )
             elif card_key == 'hobby':
                 return response.play_message(
-                    f'{user_name}, на Вашей карточке хобби написано: {info.cards["hobby"]["name"]}. После агрументации сообщите мне о том, что Вы закончили.\nНапример, "Алиса, я закончил".',
-                    f'{user_name}, - на Вашей карточке хобби написано: - {info.cards["hobby"]["name"]}. После агрументации сообщите мне о том - что Вы закончили. Например: - Алиса, - я закончил.'
+                    f'{user_name}, на Вашей карточке хобби написано: {info.cards["hobby"]["name"]}. После аргументации сообщите мне о том, что Вы закончили.\nНапример, "Алиса, я закончил".',
+                    f'{user_name}, - на Вашей карточке хобби написано: - {info.cards["hobby"]["name"]}. После аргументации сообщите мне о том - что Вы закончили. Например: - Алиса, - я закончил.'
                 )
             elif card_key == 'fear':
                 return response.play_message(
@@ -353,10 +367,12 @@ def main():
                 )
             elif card_key == 'addition_info':
                 return response.play_message(
-                    f'{user_name}, на Вашей карточке дополнительной информации написано: {info.cards["addition_info"]["name"]}. После агрументации, сообщите мне о том, что Вы закончили.\nНапример, "Алиса, я закончил".',
-                    f'{user_name}, - на Вашей карточке дополнительной информации написано: - {info.cards["addition_info"]["name"]}. После агрументации сообщите мне о том - что Вы закончили. Например: - Алиса, - я закончил.'
+                    f'{user_name}, на Вашей карточке дополнительной информации написано: {info.cards["addition_info"]["name"]}. После аргументации, сообщите мне о том, что Вы закончили.\nНапример, "Алиса, я закончил".',
+                    f'{user_name}, - на Вашей карточке дополнительной информации написано: - {info.cards["addition_info"]["name"]}. После аргументации сообщите мне о том - что Вы закончили. Например: - Алиса, - я закончил.'
                     )
         else:
+            if response.current_user_moved:
+                return response.play_message('Вы уже открывали карточку')
             response.play_incorrect()
 
     if stage == 'end_game':
@@ -371,4 +387,5 @@ def main():
     return response.play_incorrect()
 
 if __name__ == '__main__':
-    app.run(port=2096, debug=True)
+    app.run(port=3002, debug=True)
+#gunicorn --bind 0.0.0.0:3002 main:app

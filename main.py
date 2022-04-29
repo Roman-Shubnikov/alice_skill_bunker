@@ -224,13 +224,13 @@ def main():
             return response.play_message_body(config.default_messages['presentation_first_player'])
         if is_approve_phrase(command):
             if len(response.users_play) < config.MIN_PLAYERS:
-                return response.play_message(f'Для этой игры нужно минимум 4 игрока. Позовите кого-нибудь ещё и начните игру повторно.')
+                return response.play_message(f'Для этой игры нужно минимум 4 игрока. Позовите кого-нибудь ещё и пусть этот игрок представится\nНапример: "Алиса, Я Толя.')
             response.space_on_bunker = len(response.users_play) // 2
             response.set_new_stage('game')
             response.set_new_curr_user(
                 random.randint(0, len(response.users_play) - 1))
             catastrophe = config.catastrophes[response.catastrophe]
-            return response.play_message(f'Приступим к игре. Случилась катастрофа ' + catastrophe['name'] + '.\n' + catastrophe['description'] + '.\nНачинаем?',
+            return response.play_message(f'Приступим к игре. Случилась катастрофа —' + catastrophe['name'] + '.\n' + catastrophe['description'] + '.\nНачинаем?',
                                          f'Приступим к игре. Случилась катастрофа ' +
                                          catastrophe['name'] + '. ' +
                                          catastrophe['description'] + '. Начинаем?'
@@ -259,8 +259,8 @@ def main():
                             {'здоровье': 'health'}, 
                             {'хобби': 'hobby'}, 
                             {'страхи': 'fear'}, 
-                            {'личное':'personality'},
-                            {'дополнительно': 'addition_info'}]
+                            {'качетство':'personality'},
+                            {'информация': 'addition_info'}]
                         )
                         response.set_new_users_play(users_play)
                         return response.play_message(
@@ -357,27 +357,27 @@ def main():
                 )
             elif card_key == 'health':
                 return response.play_message(
-                    f'{user_name}, на Вашей карточке здоровья написано: {info.cards["health"]["name"]}. Как закончите аргументацию, скажите об этом мне.\nНапример: "Алиса, я закончил".',
+                    f'{user_name}, на Вашей карточке здоровья написано: {info.cards["health"]["name"]}.\nКак закончите аргументацию, скажите об этом мне.\nНапример: "Алиса, я закончил".',
                     f'{user_name}, - на Вашей карточке здоровья написано: - {info.cards["health"]["name"]}. Как закончите аргументацию - скажите об этом мне. Например: - Алиса, - я закончил.'   
                 )
             elif card_key == 'hobby':
                 return response.play_message(
-                    f'{user_name}, на Вашей карточке хобби написано: {info.cards["hobby"]["name"]}. После аргументации сообщите мне о том, что Вы закончили.\nНапример, "Алиса, я закончил".',
+                    f'{user_name}, на Вашей карточке хобби написано: {info.cards["hobby"]["name"]}.\nПосле аргументации сообщите мне о том, что Вы закончили.\nНапример, "Алиса, я закончил".',
                     f'{user_name}, - на Вашей карточке хобби написано: - {info.cards["hobby"]["name"]}. После аргументации сообщите мне о том - что Вы закончили. Например: - Алиса, - я закончил.'
                 )
             elif card_key == 'fear':
                 return response.play_message(
-                    f'{user_name}, на Вашей карточке страха написано: {info.cards["fear"]["name"]}. Как закончите аргументацию, скажите об этом мне.\nНапример: "Алиса, я закончил".',
-                    f'{user_name}, - на Вашей карточке страха написано: - {info.cards["fear"]["name"]}. Как закончите аргументацию - скажите об этом мне. Например: - Алиса, - я закончил.'
+                    f'{user_name}, на Вашей карточке страха написано: {info.cards["fear"]["name"]}. Проще говоря: {info.catds["fear"]["description"]}.\nКак закончите аргументацию, скажите об этом мне.\nНапример: "Алиса, я закончил".',
+                    f'{user_name}, - на Вашей карточке страха написано: - {info.cards["fear"]["name"]}. Проще говоря, {info.catds["fear"]["description_tts"]}. Как закончите аргументацию - скажите об этом мне. Например: - Алиса, - я закончил.'
                 )
             elif card_key == 'personality':
                 return response.play_message(
-                    f'{user_name}, на Вашей карточке личных качеств написано: {info.cards["personality"]["name"]}. Как закончите аргументацию, скажите об этом мне.\nНапример: "Алиса, я закончил".',
+                    f'{user_name}, на Вашей карточке личных качеств написано: {info.cards["personality"]["name"]}.\nКак закончите аргументацию, скажите об этом мне.\nНапример: "Алиса, я закончил".',
                     f'{user_name}, - на Вашей карточке личных качеств написано: - {info.cards["personality"]["name"]}. Как закончите аргументацию - скажите об этом мне. Например: - Алиса, - я закончил.'   
                 )
             elif card_key == 'addition_info':
                 return response.play_message(
-                    f'{user_name}, на Вашей карточке дополнительной информации написано: {info.cards["addition_info"]["name"]}. После аргументации, сообщите мне о том, что Вы закончили.\nНапример, "Алиса, я закончил".',
+                    f'{user_name}, на Вашей карточке дополнительной информации написано: {info.cards["addition_info"]["name"]}.\nПосле аргументации, сообщите мне о том, что Вы закончили.\nНапример, "Алиса, я закончил".',
                     f'{user_name}, - на Вашей карточке дополнительной информации написано: - {info.cards["addition_info"]["name"]}. После аргументации сообщите мне о том - что Вы закончили. Например: - Алиса, - я закончил.'
                     )
         else:

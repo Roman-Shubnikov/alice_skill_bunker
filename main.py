@@ -17,6 +17,12 @@ def gen_enumirate_text(counters:list) -> str:
     else:
         return ", ".join(counters [:length - 1]) + ' и ' + counters[length - 1]
 
+def is_approve_phrase(command):
+    for i in config.approve_phrases:
+        if command [:5] == i [:5]:
+            return True
+    return False
+
 class UserInfo(object):
     def __init__(self, cards:dict={}, hidden_cards:dict={},
     json_load:dict={}
@@ -168,6 +174,8 @@ def main():
 
     u_request = data['request']
     command = u_request['command']
+    if 'алиса ' in command [:6] or 'яндекс ' in command [:6]:
+        command = command [6:].strip()
     original_text = u_request['original_utterance']
     command_tokens = u_request['nlu']['tokens']
     entities = u_request['nlu']['entities'] if 'nlu' in u_request and 'entities' in u_request['nlu'] else None
@@ -196,10 +204,10 @@ def main():
         return response.get_rules()
 
     if stage == 'approve_hello':
-        if command in config.approve_phrases:
+        if is_approve_phrase(command):
             response.set_new_stage('approve_rules')
             return response.get_rules('Начинаем?', 'Начинаем?')
-        not_approved = 'К сожалению, я не поняла Вас. Если вы не готовы начать просто, закройте навык или подготвьтесь и сообщите когда всё сделаете.\nнапример: "Алиса, мы готовы".'
+        not_approved = 'К сожалению, я не поняла Вас. Если вы не готовы начать, просто закройте навык или подготовьтесь и сообщите когда всё сделаете.\nНапример: "Алиса, мы готовы".'
         return response.play_message(not_approved)
 
     if stage == 'approve_rules':
@@ -207,14 +215,14 @@ def main():
             return response.get_rules('Начинаем?', 'Начинаем?')
         if 'нет' in command:
             return response.play_message_body(config.default_messages['rules_repeat'])
-        if command in config.approve_phrases:
+        if is_approve_phrase(command):
             response.set_new_stage('users_registration')
             return response.play_message_body(config.default_messages['presentation_first_player'])
 
     if stage == 'users_registration':
         if 'повтори' in command:
             return response.play_message_body(config.default_messages['presentation_first_player'])
-        if command in config.approve_phrases:
+        if is_approve_phrase(command):
             if len(response.users_play) < config.MIN_PLAYERS:
                 return response.play_message(f'Для этой игры нужно минимум 4 игрока. Позовите кого-нибудь ещё и начните игру повторно.')
             response.space_on_bunker = len(response.users_play) // 2
@@ -262,13 +270,15 @@ def main():
             not_approved = 'Я вас немного не поняла. Можете ещё раз представится? Например: "Алиса, я Анатолий".'
             return response.play_message(not_approved)
 
-
+    if stage == 'test': 
+        return response.play_message(f'Игра закончилась. В бункер попали: . Желаете начать новую игру?',
+                        f'<speaker audio="alice-sounds-game-win-1.opus"> Игра закончилась. В бункер попали: Желаете начать новую игру?')
     if stage == 'game':
         curr_user = response.get_user_by_index(response.current_user_index)
         user_name = curr_user["name"].capitalize()
         info = curr_user['info']
         if response.voiting:
-            if command_tokens[1] in ['выбывает', 'вылетает', 'убывает', 'бывает', 'убивает', 'побывает']:
+            if len(command_tokens) > 1 and command_tokens[1] in ['выбывает', 'вылетает', 'убывает', 'бывает', 'убивает', 'побывает']:
                 name_kick = command_tokens[0]
                 names_list = list(response.users_play)
                 
@@ -280,19 +290,18 @@ def main():
                     if response.current_user_index >= index_kick_user:
                         response.current_user_index -= 1
                     if response.space_on_bunker >= len(response.users_play):
-                        addition_names = f'{names[0]}'
-                        for i in range(1, len(names)):
-                            addition_names += f', {names[i]}'
+                        addition_names = gen_enumirate_text(names)
                         response.set_new_stage('end_game')
-                        return response.play_message(f'Игра закончилась. В бункер попали: {addition_names}. Желаете начать новую игру?')
+                        return response.play_message(f'Игра закончилась. В бункер попали: {addition_names}. Желаете начать новую игру?',
+                        f'<speaker audio="alice-sounds-game-win-1.opus"> Игра закончилась. В бункер попали: {addition_names}. Желаете начать новую игру?')
                     response.voiting = False
-                    next_user = response.get_user_by_index(response.get_next_user_index())
-                    user_name = next_user["name"].capitalize()
-                    cards = [list(i)[0] for i in next_user['info'].hidden_cards]
+                    cards = [list(i)[0] for i in curr_user['info'].hidden_cards]
                     hidden_cards_read = ", ".join(cards)
                     rand_card = random.choice(cards)
-                    return response.play_message(f'{name_kick.capitalize()} остаётся встречать катастрофу за дверьми бункера. Какую карточку характеристики открыть? {user_name}, можете открыть одну из карточек: {hidden_cards_read}.\nНапример скажите: "Алиса, открой карточку {rand_card}')
+                    return response.play_message(f'{name_kick.capitalize()} остаётся встречать катастрофу за дверьми бункера. Какую карточку характеристики открыть? {user_name}, можете открыть одну из карточек: {hidden_cards_read}.\nНапример скажите: "Алиса, открой карточку {rand_card}"')
                 else:
+                    names_list = list(response.users_play)
+                    names = [i.capitalize() for i in names_list]
                     names_kick = gen_enumirate_text(names)
                     return response.play_message(f'Такой игрок с нами не играет. С нами играют: {names_kick}', f'Такой игрок с нами не играет. С нами играют: {names_kick}')
         if command in ['повтори', 'повтори катастрофу']:
@@ -302,7 +311,7 @@ def main():
                                          catastrophe['name'] + '. ' +
                                          catastrophe['description']
                                          )
-        if command in ['я закончил', 'я закончу']:
+        if command [:4] in [i [:4] for i in ['я закончил', 'я закончу', 'закончил']]:
             if not response.current_user_moved:
                 return response.play_message('Вы не походили')
             
@@ -323,20 +332,21 @@ def main():
                 if 'profession' in [i[list(i)[0]] for i in next_user['info'].hidden_cards]:
                     addition_text += 'Скажите, когда будете готовы ходить.'
                 else:
-                    addition_text += f'Какую карточку характеристики открыть? {user_name}, можете открыть одну из карточек: {hidden_cards_read}.\nНапример скажите: "Алиса, открой карточку {rand_card}'
+                    addition_text += f'Какую карточку характеристики открыть? {user_name}, можете открыть одну из карточек: {hidden_cards_read}.\nНапример скажите: "Алиса, открой карточку {rand_card}"'
                 return response.play_message(f'Хорошо! {user_name} ходит. {addition_text}', f'Хорошо! {user_name} ходит. {addition_text}')            
     
         card_name = 'профессия'
         is_profession = 'profession' in 'profession' in [i[list(i)[0]] for i in curr_user['info'].hidden_cards]
         if (command_tokens[0] == 'открой' or is_profession) and not response.current_user_moved:
-            response.current_user_moved = True
-            if len(command_tokens) < 3:
+            
+            if len(command_tokens) < 3 and not is_profession:
                 return response.play_message('Извините, Вы не указали карточку.')
             card_name = command_tokens[2] if not is_profession else 'профессия'
             opened_card = info.open_card(card_name)
             if opened_card is None:
                 return response.play_message('Извините, но карточка уже открыта.')
             card_key = opened_card['key']
+            response.current_user_moved = True
             response.replace_user_info(response.current_user_index, info)
             
 
@@ -376,9 +386,10 @@ def main():
             response.play_incorrect()
 
     if stage == 'end_game':
-        if command in config.approve_phrases:
-            response.set_new_stage('approve_hello')
-            return response.play_message('Начинаю новую игру.')
+        if is_approve_phrase(command):
+            response = Response('approve_hello', {}, random.choice(
+            [i for i in range(0, len(config.catastrophes) - 1)]))
+            return response.play_message('Начинаю новую игру. Как будете готовы, скажите: "Алиса, мы готовы"')
         if command in ['нет', 'не хочу']:
             return response.play_message('Хорошо! Будет скучно обращайтесь!')
         else:

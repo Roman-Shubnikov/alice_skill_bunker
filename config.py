@@ -213,7 +213,7 @@ hobby = [
     {'name': 'Изготовление изделий из кожи', 'name_tts': 'Изготовление изделий из кожи'}
 ]
 
-person = [
+personality = [
     {'name': 'Требовательный', 'name_tts': 'Требовательный'},
     {'name': 'Ворчливый', 'name_tts': 'Ворчливый'},
     {'name': 'Добродушный', 'name_tts': 'Добродушный'},
@@ -320,7 +320,7 @@ fear = [{'name': 'Клаустрофобия', 'name_tts': 'Клаустрофо
             'description_tts': 'Боязнь собак'},
         {'name': 'Нет фобий', 'name_tts': 'Нет фобий', 'description': 'У вас нет фобий', 'description_tts': 'У вас нет фобий'}]
 
-inform = [
+addition_info = [
     {'name':'Вернулся из горячей точки.', 'name_tts': 'Вернулся из горячей точки.'},
     {'name': 'Взломал базу данных ЦРУ.', 'name_tts': 'Взломал базу данных ЦРУ.'},
     {'name': 'Видел инопланетян.', 'name_tts': 'Видел инопланетян.'},
@@ -403,6 +403,8 @@ specialmove = [
 TYPES_YANDEX_ENTITYES = {
     'FIO': 'YANDEX.FIO',
 }
+
+CARD_KEYS = ['profession', 'health', 'hobby', 'fear', 'personality', 'addition_info']
 
 MIN_PLAYERS = 4
 MAX_PLAYERS = 20

@@ -1,3 +1,4 @@
+from copy import deepcopy
 from flask import Flask
 from flask import request
 import json
@@ -252,8 +253,8 @@ def main():
                             'health': random.choice(config.health),
                             'hobby':  random.choice(config.hobby),
                             'fear':  random.choice(config.fear),
-                            'personality': random.choice(config.person),
-                            'addition_info':  random.choice(config.inform),
+                            'personality': random.choice(config.personality),
+                            'addition_info':  random.choice(config.addition_info),
                             },
                             [{'профессия': 'profession'}, 
                             {'здоровье': 'health'}, 

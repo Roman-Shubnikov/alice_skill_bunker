@@ -219,9 +219,9 @@ def main():
         if is_approve_phrase(command):
             response.set_new_stage('users_registration')
             return response.play_message_body(config.default_messages['presentation_first_player'])
-
-        # Здесь нужно написать фразу-подсказку если пользователь что-то вякнул
-        # return response.play_message('')
+        
+        # Done
+        return response.play_message('Простите я Вас не поняла. Вы готовы начать игру или мне повторить правила?')
 
     if stage == 'users_registration':
         if 'повтори' in command:
@@ -267,16 +267,25 @@ def main():
                             {'информация': 'addition_info'}]
                         )
                         response.set_new_users_play(users_play)
-                        # Нужно в конец этого сообщения добавить фразу 4 игрока уже присоединились в случае их фактического присоединения шпаргалка len(users_play)
+                        # Done
+                        if len(users_play) == 4:
+                            return response.play_message(
+                                f'Отлично!\nМинимальное количество игроков уже есть. Кто следующий?\nЕсли все игроки уже присоединились, скажите: "Мы готовы"',
+                                f'Отлично! - Минимальное количество игроков уже есть. Кто следующий? - - - Если все игроки присоединились, скажите: - мы готовы')
+                        if len(users_play) > 4:
+                                return response.play_message(
+                                    f'Отлично! Кто следующий?\nЕсли все игроки уже присоединились, скажите: "Мы готовы"',
+                                    f'Отлично! Кто следующий? - - - Если все игроки присоединились, скажите: - мы готовы')
                         return response.play_message(
-                            f'Отлично! Кто следующий?\nЕсли все игроки уже присоединились, скажите: "Мы готовы"',
-                            f'Отлично! - Кто следующий? - - - Если все игроки присоединились, скажите: - мы готовы')
+                            f'Отлично! Вам нужно ещё несколько игроков. Кто следующий?\nЕсли все игроки уже присоединились, скажите: "Мы готовы"',
+                            f'Отлично! - Вам нужно ещё несколько игроков. Кто следующий? - - - Если все игроки присоединились, скажите: - мы готовы')
+                else:
+                    return response.play_message('Я не знаю такого имени. Представьтесь более простым именем. Например: "Я Вова".')
         else:
-            not_approved = 'Я вас немного не поняла. Можете ещё раз представится? Например: "Алиса, я Анатолий".'
+            not_approved = 'Я вас немного не поняла. Можете ещё раз представится? Например: "Я Анатолий".'
             return response.play_message(not_approved)
         
-        # Здесь нужно написать фразу-подсказку если пользователь что-то вякнул
-        # return response.play_message('')
+        # Done
 
     if stage == 'test': 
         return response.play_message(f'Игра закончилась. В бункер попали: . Желаете начать новую игру?',
@@ -314,10 +323,10 @@ def main():
                     return response.play_message(f'Такой игрок с нами не играет. С нами играют: {names_kick}', f'Такой игрок с нами не играет. С нами играют: {names_kick}')
         if command in ['повтори', 'повтори катастрофу']:
             catastrophe = config.catastrophes[response.catastrophe]
-            return response.play_message(f'Хорошо. Случилась катастрофа ' + catastrophe['name'] + '.\n' + catastrophe['description'],
+            return response.play_message(f'Хорошо. Случилась катастрофа ' + catastrophe['name'] + '.\n' + catastrophe['description'] + '\nНачинаем?',
                                          f'Хорошо. Случилась катастрофа ' +
                                          catastrophe['name'] + '. ' +
-                                         catastrophe['description']
+                                         catastrophe['description'] + ' Начинаем?'
                                          )
         if command [:4] in [i [:4] for i in ['я закончил', 'я закончу', 'закончил', 'все', 'всё']]:
             if not response.current_user_moved:
@@ -389,12 +398,12 @@ def main():
                     f'{user_name}, - на Вашей карточке дополнительной информации написано: - {info.cards["addition_info"]["name"]}. После аргументации сообщите мне о том - что Вы закончили. Например: - я закончил.'
                     )
         else:
+
             if response.current_user_moved:
-                return response.play_message('Вы уже открывали карточку')
+                return response.play_message('Вы уже открывали карточку. Вам нужно начать аргументацию и после её окончания сообщить об этом.\nНапример: "Я закончил"', 'Вы уже открывали карточку. Вам нужно начать аргументацию и после её окончания сообщить об этом. - Например, - Я закончил')
             response.play_incorrect()
 
-        # Здесь нужно написать фразу-подсказку если пользователь что-то вякнул
-        # return response.play_message('')
+        # Done
 
     if stage == 'end_game':
         if is_approve_phrase(command):
@@ -406,8 +415,7 @@ def main():
         else:
             return response.play_message('Я не поняла Вас. Вы желаете начать новую игру?')
         
-        # Здесь нужно написать фразу-подсказку если пользователь что-то вякнул
-        # return response.play_message('')
+        # Done
 
     return response.play_incorrect()
 

@@ -263,7 +263,7 @@ def main():
                             {'здоровье': 'health'}, 
                             {'хобби': 'hobby'}, 
                             {'страхи': 'fear'}, 
-                            {'качетство':'personality'},
+                            {'качество':'personality'},
                             {'информация': 'addition_info'}]
                         )
                         response.set_new_users_play(users_play)
@@ -411,6 +411,7 @@ def main():
             [i for i in range(0, len(config.catastrophes) - 1)]))
             return response.play_message('Начинаю новую игру. Как будете готовы, скажите: "Алиса, мы готовы"')
         if command in ['нет', 'не хочу']:
+            response.response['response']['end_session'] = True
             return response.play_message('Хорошо! Будет скучно обращайтесь!')
         else:
             return response.play_message('Я не поняла Вас. Вы желаете начать новую игру?')

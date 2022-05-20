@@ -23,7 +23,19 @@ def is_approve_phrase(command):
         if command [:5] == i [:5]:
             return True
     return False
-
+def gen_argument_phrase():
+    example = ['\nНапример: "Я закончил(-а)".', 'Например: - я закончил']
+    mixin = random.choice(["", " об этом"])
+    variant_1 = [
+        f'\nСейчас Вы должны объяснить, чем и как будете полезны в бункере и после выхода из него.\nКак закончите аргументацию, скажите мне{mixin}.{example[0]}', 
+        f'Сейчас Вы должны объяснить, чем и как будете полезны в бункере и после выхода из него. Как закончите аргументацию - сообщите мне{mixin}. {example[1]}',
+        ]
+    variant_2 = [
+        f'\nСейчас Вы должны объяснить, чем и как будете полезны в бункере и после выхода из него.\nПосле аргументации, сообщите мне о том, что Вы закончили.{example[0]}',
+        f'Сейчас Вы должны объяснить, чем и как будете полезны в бункере и после выхода из него. После аргументации сообщите мне о том - что Вы закончили. {example[1]}',
+    ]
+    rand_phrase = random.choice([variant_1, variant_2])
+    return rand_phrase
 class UserInfo(object):
     def __init__(self, cards:dict={}, hidden_cards:dict={},
     json_load:dict={}
@@ -203,6 +215,13 @@ def main():
 
     if command in config.help_pharases:
         return response.get_rules()
+
+    if command in ['помощь', 'что ты умеешь', 'что ты можешь', 'как играть']:
+        return response.play_message('''
+        У каждого игрока есть 6 характерик, которые составляют его персонажа.\n
+        Сама игра состоит из двух этапов. Первый этап - открытие карточки, где игрок доказывает, что он будет полезен в бункере. Второй этап - голосование, где решают, кто не попадёт в бункер.\n
+        В самом же бункере места хватит не всем, но никто из игроков не знает сколько людей попадёт туда.
+        ''')
         
     if stage == 'approve_hello':
         if is_approve_phrase(command):
@@ -315,7 +334,7 @@ def main():
                     cards = [list(i)[0] for i in curr_user['info'].hidden_cards]
                     hidden_cards_read = ", ".join(cards)
                     rand_card = random.choice(cards)
-                    return response.play_message(f'{name_kick.capitalize()} остаётся встречать катастрофу за дверьми бункера. Какую карточку характеристики открыть? {user_name}, можете открыть одну из карточек: {hidden_cards_read}.\nНапример скажите: "Алиса, открой карточку {rand_card}"')
+                    return response.play_message(f'{name_kick.capitalize()} остаётся встречать катастрофу за дверьми бункера. Какую карточку характеристики открыть? {user_name}, можете открыть одну из карточек: {hidden_cards_read}.\nНапример скажите: "Открой карточку {rand_card}"')
                 else:
                     names_list = list(response.users_play)
                     names = [i.capitalize() for i in names_list]
@@ -366,36 +385,36 @@ def main():
             response.current_user_moved = True
             response.replace_user_info(response.current_user_index, info)
             
-
+            rand_end_phrase = gen_argument_phrase()
             if card_key == 'profession':
                 return response.play_message(
-                    f'{user_name}, Ваша профессия — {info.cards["profession"]["name"]}. Как закончите аргументацию, сообщите мне.\nНапример: "Я закончил".',
-                    f'{user_name}, - ваша профессия - {info.cards["profession"]["name_tts"]}. Как закончите аргументацию - сообщите мне. Например: - я закончил'
+                    f'{user_name}, Ваша профессия — {info.cards["profession"]["name"]}.{rand_end_phrase[0]}',
+                    f'{user_name}, - ваша профессия - {info.cards["profession"]["name_tts"]}. {rand_end_phrase[1]}'
                 )
             elif card_key == 'health':
                 return response.play_message(
-                    f'{user_name}, на Вашей карточке здоровья написано: {info.cards["health"]["name"]}.\nКак закончите аргументацию, скажите об этом мне.\nНапример: "Я закончил".',
-                    f'{user_name}, - на Вашей карточке здоровья написано: - {info.cards["health"]["name"]}. Как закончите аргументацию - скажите об этом мне. Например:  - я закончил.'   
+                    f'{user_name}, на Вашей карточке здоровья написано: {info.cards["health"]["name"]}.{rand_end_phrase[0]}',
+                    f'{user_name}, - на Вашей карточке здоровья написано: - {info.cards["health"]["name"]}. {rand_end_phrase[1]}'   
                 )
             elif card_key == 'hobby':
                 return response.play_message(
-                    f'{user_name}, на Вашей карточке хобби написано: {info.cards["hobby"]["name"]}.\nПосле аргументации сообщите мне о том, что Вы закончили.\nНапример, "Я закончил".',
-                    f'{user_name}, - на Вашей карточке хобби написано: - {info.cards["hobby"]["name"]}. После аргументации сообщите мне о том - что Вы закончили. Например: - я закончил.'
+                    f'{user_name}, на Вашей карточке хобби написано: {info.cards["hobby"]["name"]}.{rand_end_phrase[0]}',
+                    f'{user_name}, - на Вашей карточке хобби написано: - {info.cards["hobby"]["name"]}. {rand_end_phrase[1]}'
                 )
             elif card_key == 'fear':
                 return response.play_message(
-                    f'{user_name}, на Вашей карточке страха написано: {info.cards["fear"]["name"]}. Проще говоря: {info.cards["fear"]["description"]}.\nКак закончите аргументацию, скажите об этом мне.\nНапример: "Я закончил".',
-                    f'{user_name}, - на Вашей карточке страха написано: - {info.cards["fear"]["name"]}. Проще говоря, {info.cards["fear"]["description_tts"]}. Как закончите аргументацию - скажите об этом мне. Например: - закончил.'
+                    f'{user_name}, на Вашей карточке страха написано: {info.cards["fear"]["name"]}. Проще говоря: {info.cards["fear"]["description"]}.{rand_end_phrase[0]}',
+                    f'{user_name}, - на Вашей карточке страха написано: - {info.cards["fear"]["name"]}. Проще говоря, {info.cards["fear"]["description_tts"]}. {rand_end_phrase[1]}'
                 )
             elif card_key == 'personality':
                 return response.play_message(
-                    f'{user_name}, на Вашей карточке личных качеств написано: {info.cards["personality"]["name"]}.\nКак закончите аргументацию, скажите об этом мне.\nНапример: "Я закончил".',
-                    f'{user_name}, - на Вашей карточке личных качеств написано: - {info.cards["personality"]["name"]}. Как закончите аргументацию - скажите об этом мне. Например: - я закончил.'   
+                    f'{user_name}, на Вашей карточке личных качеств написано: {info.cards["personality"]["name"]}.{rand_end_phrase[0]}',
+                    f'{user_name}, - на Вашей карточке личных качеств написано: - {info.cards["personality"]["name"]}. {rand_end_phrase[1]}'   
                 )
             elif card_key == 'addition_info':
                 return response.play_message(
-                    f'{user_name}, на Вашей карточке дополнительной информации написано: {info.cards["addition_info"]["name"]}.\nПосле аргументации, сообщите мне о том, что Вы закончили.\nНапример, "Я закончил".',
-                    f'{user_name}, - на Вашей карточке дополнительной информации написано: - {info.cards["addition_info"]["name"]}. После аргументации сообщите мне о том - что Вы закончили. Например: - я закончил.'
+                    f'{user_name}, на Вашей карточке дополнительной информации написано: {info.cards["addition_info"]["name"]}.{rand_end_phrase[0]}',
+                    f'{user_name}, - на Вашей карточке дополнительной информации написано: - {info.cards["addition_info"]["name"]}. {rand_end_phrase[1]}'
                     )
         else:
 
@@ -409,7 +428,7 @@ def main():
         if is_approve_phrase(command):
             response = Response('approve_hello', {}, random.choice(
             [i for i in range(0, len(config.catastrophes) - 1)]))
-            return response.play_message('Начинаю новую игру. Как будете готовы, скажите: "Алиса, мы готовы"')
+            return response.play_message('Начинаю новую игру. Как будете готовы, скажите: "Мы готовы"')
         if command in ['нет', 'не хочу']:
             response.response['response']['end_session'] = True
             return response.play_message('Хорошо! Будет скучно обращайтесь!')
